@@ -1,6 +1,7 @@
 ﻿#-------------------------------------------------------------------------------
-# Name: IcePolygonforWatersheds.py
-# Purpose: This tool divides paleoice or modern glacier polygons based on watersheds/basins
+# Name: DivideforWatersheds.py
+# Purpose: This tool divides paleoglacier or modern glacier polygon outlines based on
+# watershed (catchment or drainage basin) boundaries
 #
 # Created:     03/04/2023 - 03/08/2023
 # Author: Dr. Yingkui Li
