@@ -8,7 +8,8 @@ The github site includes an ArcGIS Pro toolbox (atbx) file and a python folder, 
 PG-Inventory is a GIS toolbox developed in ArcGIS Pro to help divide paleoglacier outlines based on their drainage areas and generate basic and derived attributes of paleogalcier outlines. The toolbox includes three tools: 1) divide glacier outlines for watersheds; 
 2) add basic glacier attributes, and 3) add derived attributes for palaeoglaciers. All these tools are written with Python in ArcGIS Pro with a user-friendly interface that allows users to process a large set of data.
 
-![image](https://github.com/user-attachments/assets/b12b03ae-a40e-4f7b-8304-2a514114e7e1)
+![image](https://github.com/user-attachments/assets/df9561da-d43f-47c9-b5f3-2691a0e4bb0d)
+
 
 ## Subdivide glacier outlines for watersheds 
 The ‘SubDivide glacier outlines for watersheds’ tool subdivides the (paleo)glacier outlines based on drainage areas. The inputs of this tool include a digital elevation model (DEM), an input glacier outline (polygon) file,
@@ -17,7 +18,8 @@ outline. Then, the elevation range (local relief) for each drainage basin is cal
 basins with greater elevation ranges than the specified minimum elevation range. This step is repeated until all basins with small elevation ranges are merged to their nearby basins with large elevation range. 
 The output of this tool is the subdivided glacier outlines. Note that manual check and adjustment are needed to ensure the quality of the subdivided glacier outlines. 
 
-![image](https://github.com/user-attachments/assets/3e4c3099-df19-4698-8353-9c6cbad3d676)
+![image](https://github.com/user-attachments/assets/4fc432d2-ce40-4af6-abf2-fb658f4d17a1)
+
 
 ## Add basic glacier attributes
 The ‘Add basic glacier attributes’ tool generates the basic paleoglacier attributes. The inputs of this tool include the subdivided glacier outlines, the glacial stage of the outline, an (optional) age point file, 
