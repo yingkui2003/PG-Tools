@@ -150,8 +150,10 @@ final_outlines = temp_workspace + "\\final_outlines"
 arcpy.SpatialJoin_analysis(temp_workspace + "\\divided_polys_singlePart", InputOutlines, OutputIndividualOutlines, "JOIN_ONE_TO_ONE", "KEEP_COMMON", '#', "INTERSECT", "1 Meters", "#")
 
 max_gap_area = str(min_area) + " SquareMeters"
-arcpy.topographic.FillGaps(OutputIndividualOutlines, max_gap_area)
-
+try:
+    arcpy.topographic.FillGaps(OutputIndividualOutlines, max_gap_area)
+except:
+    pass
 arcpy.DeleteField_management(OutputIndividualOutlines,["Join_Count", "TARGET_FID", "ORIG_FID"])
 
 arcpy.AddMessage("Finished!!!")

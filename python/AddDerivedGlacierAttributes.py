@@ -176,16 +176,17 @@ def ELA_AA_AABR(EleArr, interval, ratio):
     
 ##main program
 InputPGIPolygons = arcpy.GetParameterAsText(0)
-RecMethod = arcpy.GetParameterAsText(1)
-IceSurf = arcpy.GetParameterAsText(2)
-IceTck = arcpy.GetParameterAsText(3)  ##ice surface DEM
+GlaStage = arcpy.GetParameterAsText(1)
+RecMethod = arcpy.GetParameterAsText(2)
+IceSurf = arcpy.GetParameterAsText(3)
+IceTck = arcpy.GetParameterAsText(4)  ##ice surface DEM
 
-interval = int(arcpy.GetParameter(4))
-AARratio = arcpy.GetParameter(5)
-AABRratio =arcpy.GetParameter(6)
+interval = int(arcpy.GetParameter(5))
+AARratio = arcpy.GetParameter(6)
+AABRratio =arcpy.GetParameter(7)
 
 #Add the output 
-OutputPGIoutlines = arcpy.GetParameterAsText(7)
+OutputPGIoutlines = arcpy.GetParameterAsText(8)
 
 arcpy.Delete_management("temp_workspace")
 
@@ -197,7 +198,7 @@ IDName = "PGI_ID"
 
 b_PGI_ID = False
 if IDName not in exist_fields:
-    arcpy.AddMessage("The PGI ID does not exist! Will create one with the default ID start with PGI_LGM_ ")
+    #arcpy.AddMessage("The PGI ID does not exist! Will create one with the default ID start with PGI_LGM_ ")
     arcpy.AddField_management(OutputPGIoutlines, IDName, "TEXT") #field for ice value
     b_PGI_ID = True
 
@@ -287,71 +288,70 @@ arcpy.DeleteField_management(OutputPGIoutlines,["Min", "Max", "Mean", "Median"])
 arcpy.Delete_management(temp_workspace + "\\zonalSAT")
 
 ##Check if the PGIIG needs to be added
-if b_PGI_ID:
-    poly_points = temp_workspace + "\\poly_points"
-    poly_points_GCS = temp_workspace + "\\poly_points_GCS"
-    arcpy.FeatureToPoint_management (OutputPGIoutlines, poly_points, "INSIDE")
-    spatial_ref = arcpy.Describe(poly_points).spatialReference
-        
-    if "GCS" in spatial_ref.name:
-        arcpy.CopyFeatures_management(poly_points, poly_points_GCS)
+poly_points = temp_workspace + "\\poly_points"
+poly_points_GCS = temp_workspace + "\\poly_points_GCS"
+arcpy.FeatureToPoint_management (OutputPGIoutlines, poly_points, "INSIDE")
+spatial_ref = arcpy.Describe(poly_points).spatialReference
+    
+if "GCS" in spatial_ref.name:
+    arcpy.CopyFeatures_management(poly_points, poly_points_GCS)
+else:
+    #arcpy.AddMessage("The DEM projection is not GCS. Re-project!")
+    out_coordinate_system = arcpy.SpatialReference("GCS_WGS_1984")
+    arcpy.Project_management(poly_points, poly_points_GCS, out_coordinate_system)
+
+arcpy.AddXY_management(poly_points_GCS)
+
+arcpy.AddMessage("Add PGI_ID...")
+polys_spatialjoin = temp_workspace + "\\polys_spatialjoin"
+arcpy.SpatialJoin_analysis(OutputPGIoutlines, poly_points_GCS, polys_spatialjoin, "JOIN_ONE_TO_ONE", "KEEP_ALL", '#', "COMPLETELY_CONTAINS")
+polyarray = arcpy.da.FeatureClassToNumPyArray(polys_spatialjoin, ('Point_X', 'Point_Y'))  
+pnt_x = np.array([item[0] for item in polyarray])
+pnt_y = np.array([item[1] for item in polyarray])
+ids = []
+for i in range(len(pnt_x)):
+    long_str = str(pnt_x[i])
+    dot = long_str.find(".")
+    endpos = dot + 4
+    if pnt_x[i] < 0:
+        ext_str = long_str[1:endpos]
+        if len(ext_str) < 6:
+            ext_str = "0" + ext_str
+        x_str = ext_str + "W"       
     else:
-        #arcpy.AddMessage("The DEM projection is not GCS. Re-project!")
-        out_coordinate_system = arcpy.SpatialReference("GCS_WGS_1984")
-        arcpy.Project_management(poly_points, poly_points_GCS, out_coordinate_system)
+        ext_str = long_str[0:endpos]
+        if len(ext_str) < 6:
+            ext_str = "0" + ext_str
+        x_str = ext_str + "E"       
 
-    arcpy.AddXY_management(poly_points_GCS)
+    lat_str = str(pnt_y[i])
+    dot = lat_str.find(".")
+    endpos = dot + 4
+    if pnt_y[i] < 0:
+        ext_str = lat_str[1:endpos]
+        if len(ext_str) < 6:
+            ext_str = "0" + ext_str
+        y_str = ext_str + "S"       
+    else:
+        ext_str = lat_str[0:endpos]
+        if len(ext_str) < 6:
+            ext_str = "0" + ext_str
+        y_str = ext_str + "N"       
 
-    arcpy.AddMessage("Add PGI_ID...")
-    polys_spatialjoin = temp_workspace + "\\polys_spatialjoin"
-    arcpy.SpatialJoin_analysis(OutputPGIoutlines, poly_points_GCS, polys_spatialjoin, "JOIN_ONE_TO_ONE", "KEEP_ALL", '#', "COMPLETELY_CONTAINS")
-    polyarray = arcpy.da.FeatureClassToNumPyArray(polys_spatialjoin, ('Point_X', 'Point_Y'))  
-    pnt_x = np.array([item[0] for item in polyarray])
-    pnt_y = np.array([item[1] for item in polyarray])
-    ids = []
-    for i in range(len(pnt_x)):
-        long_str = str(pnt_x[i])
-        dot = long_str.find(".")
-        endpos = dot + 4
-        if pnt_x[i] < 0:
-            ext_str = long_str[1:endpos]
-            if len(ext_str) < 6:
-                ext_str = "0" + ext_str
-            x_str = ext_str + "W"       
-        else:
-            ext_str = long_str[0:endpos]
-            if len(ext_str) < 6:
-                ext_str = "0" + ext_str
-            x_str = ext_str + "E"       
+    ##Combine str
+    ids.append(x_str+y_str)
 
-        lat_str = str(pnt_y[i])
-        dot = lat_str.find(".")
-        endpos = dot + 4
-        if pnt_y[i] < 0:
-            ext_str = lat_str[1:endpos]
-            if len(ext_str) < 6:
-                ext_str = "0" + ext_str
-            y_str = ext_str + "S"       
-        else:
-            ext_str = lat_str[0:endpos]
-            if len(ext_str) < 6:
-                ext_str = "0" + ext_str
-            y_str = ext_str + "N"       
-
-        ##Combine str
-        ids.append(x_str+y_str)
-
-    ##Add the attributes to the PGIpolugons
-    Prefix = "PGI_LGM_" ##Need a parameter to set this up
-    fields = [IDName]
-    with arcpy.da.UpdateCursor(OutputPGIoutlines,fields) as cursor:   #populate ice field with value from the nearest flowline point
-        i = 0
-        for row in cursor:
-            row[0] = Prefix + ids[i]
-            #row[1] = RecMethod
-            cursor.updateRow(row)
-            i += 1
-    del row, cursor
+##Add the attributes to the PGIpolugons
+Prefix = "PGI_" + GlaStage + "_"
+fields = [IDName]
+with arcpy.da.UpdateCursor(OutputPGIoutlines,fields) as cursor:   #populate ice field with value from the nearest flowline point
+    i = 0
+    for row in cursor:
+        row[0] = Prefix + ids[i]
+        #row[1] = RecMethod
+        cursor.updateRow(row)
+        i += 1
+del row, cursor
 
 arcpy.AddMessage("Step 2: Add slope and aspect-related attrbutes...")
 
@@ -391,55 +391,66 @@ FcID = arcpy.Describe(OutputPGIoutlines).OIDFieldName
 fields = (FcID, "SHAPE@","MGE","AAR","AA","AABR", "HI", "Hypsomax", "A3D2D", "A3D", "SHAPE@AREA")
 
 volumetable = arcpy.env.scratchFolder + "\\volumetable.txt"
+    
 
 with arcpy.da.UpdateCursor(OutputPGIoutlines, fields) as cursor:
     for row in cursor:
         gid = row[0]
         arcpy.AddMessage("Processing Glacier #" + str(gid))
 
-        
         galcierDEM = ExtractByMask(IceSurf, row[1])
 
         array = arcpy.RasterToNumPyArray(galcierDEM,"","","",0)
         EleArr = array[array > 0].astype(int) ##Get the elevations greater than zero
+        try:
+            ela_aar, ela_mge = ELA_AAR_MGE(EleArr, interval, AARratio)
+            row[2] = ela_mge
+            row[3] = ela_aar
+            ela_aa, ela_AABR = ELA_AA_AABR(EleArr, interval, AABRratio)
+            row[4] = ela_aa
+            row[5] = ela_AABR
 
-        ela_aar, ela_mge = ELA_AAR_MGE(EleArr, interval, AARratio)
-        row[2] = ela_mge
-        row[3] = ela_aar
-        ela_aa, ela_AABR = ELA_AA_AABR(EleArr, interval, AABRratio)
-        row[4] = ela_aa
-        row[5] = ela_AABR
+            ##Calcualte the Hypsometric max and Hypsometric intergal
+            Z_min = np.min(EleArr)
+            Z_max = np.max(EleArr)
+            Z_mean = np.mean(EleArr)
 
-        ##Calcualte the Hypsometric max and Hypsometric intergal
-        Z_min = np.min(EleArr)
-        Z_max = np.max(EleArr)
-        Z_mean = np.mean(EleArr)
+            Hi = (Z_mean - Z_min) / (Z_max - Z_min)
+            row[6] = round(Hi,3)
+            
+            vals,counts = np.unique(EleArr, return_counts=True)
+            index = np.argmax(counts)
+            hypo_max = vals[index]
+            row[7] = hypo_max
+            
+            #calculate 3D surface
+            ##Step 1: Conduct Suface Volume analysis to generate the surface volume table, volumetable
+            if arcpy.Exists(volumetable):
+                arcpy.Delete_management(volumetable)
+            
+            arcpy.SurfaceVolume_3d(galcierDEM, volumetable, "ABOVE", "0")
+            ##Step 2: Read the volume table for 3D area and 2Darea, and calculate the A3D/A2D ratio
+            arr=arcpy.da.TableToNumPyArray(volumetable, ('AREA_2D', 'AREA_3D'))
+            area_2D = float(arr[0][0])
+            area_3D = float(arr[0][1])
+            Ratio3D2D = area_3D / area_2D
+            ##Step 3: Assign the values to the attibute fields
+            row[8] = round(Ratio3D2D, 3)
+            ##Step 4: make sure to delete volumetable, so that it only has one record for the corresponding cirque outline
+            arcpy.Delete_management(volumetable)
 
-        Hi = (Z_mean - Z_min) / (Z_max - Z_min)
-        row[6] = round(Hi,3)
-        
-        vals,counts = np.unique(EleArr, return_counts=True)
-        index = np.argmax(counts)
-        hypo_max = vals[index]
-        row[7] = hypo_max
-        
-        #calculate 3D surface
-        ##Step 1: Conduct Suface Volume analysis to generate the surface volume table, volumetable
-        arcpy.SurfaceVolume_3d(galcierDEM, volumetable, "ABOVE", "0")
-        ##Step 2: Read the volume table for 3D area and 2Darea, and calculate the A3D/A2D ratio
-        arr=arcpy.da.TableToNumPyArray(volumetable, ('AREA_2D', 'AREA_3D'))
-        area_2D = float(arr[0][0])
-        area_3D = float(arr[0][1])
-        Ratio3D2D = area_3D / area_2D
-        ##Step 3: Assign the values to the attibute fields
-        row[8] = round(Ratio3D2D, 3)
-        ##Step 4: make sure to delete volumetable, so that it only has one record for the corresponding cirque outline
-        arcpy.Delete_management(volumetable)
-
-        #Adjust Area3D based on the A3D/A2D ratio and vector A2D to be consistent with the ratio
-        A2D = row[10]
-        adjusted_area_3D = A2D * Ratio3D2D
-        row[9] = adjusted_area_3D
+            #Adjust Area3D based on the A3D/A2D ratio and vector A2D to be consistent with the ratio
+            A2D = row[10]
+            adjusted_area_3D = A2D * Ratio3D2D
+            row[9] = adjusted_area_3D
+        except:
+            arcpy.AddMessage("No ice surface info are related to the outline")
+            row[4] = -999
+            row[5] = -999
+            row[6] = -999
+            row[7] = -999
+            row[8] = -999
+            row[9] = -999
         
         cursor.updateRow(row)
 
