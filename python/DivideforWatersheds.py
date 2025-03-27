@@ -71,13 +71,13 @@ extractDEM = ExtractByMask(InputDEM, dissove_buf)
 arcpy.AddMessage("Step 2: Extract catchments for glacier outlines...")
 
 ##set the parallelProcessingFactor for large DEMs
-dem = Raster(extractDEM)
+#dem = Raster(extractDEM)
 nrow = extractDEM.height
 ncol = extractDEM.width
 
 oldPPF = arcpy.env.parallelProcessingFactor
 if (nrow > 1500 or ncol > 1500):
-    arcpy.AddMessage("The DEM has " +str(nrow) + " rows and " + str(ncol) + " columns")
+    #arcpy.AddMessage("The DEM has " +str(nrow) + " rows and " + str(ncol) + " columns")
     arcpy.env.parallelProcessingFactor = 0 ##use 0 for large rasters
     
 #Hydro analysis
