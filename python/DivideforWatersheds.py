@@ -69,6 +69,17 @@ extractDEM = ExtractByMask(InputDEM, dissove_buf)
 
 ###Step 2: Basin analysis
 arcpy.AddMessage("Step 2: Extract catchments for glacier outlines...")
+
+##set the parallelProcessingFactor for large DEMs
+dem = Raster(extractDEM)
+nrow = extractDEM.height
+ncol = extractDEM.width
+
+oldPPF = arcpy.env.parallelProcessingFactor
+if (nrow > 1500 or ncol > 1500):
+    arcpy.AddMessage("The DEM has " +str(nrow) + " rows and " + str(ncol) + " columns")
+    arcpy.env.parallelProcessingFactor = 0 ##use 0 for large rasters
+    
 #Hydro analysis
 fillDEM =Fill(extractDEM)  ##Fill the sink first
 fdir = FlowDirection(fillDEM, "FORCE") ##Flow direction force out edge
@@ -158,3 +169,5 @@ arcpy.DeleteField_management(OutputIndividualOutlines,["Join_Count", "TARGET_FID
 
 arcpy.AddMessage("Finished!!!")
 arcpy.Delete_management("temp_workspace")
+##Reset parallelProcessingFactor to the default
+arcpy.env.parallelProcessingFactor = oldPPF
