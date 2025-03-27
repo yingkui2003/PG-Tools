@@ -28,6 +28,15 @@ from arcpy.sa import *
 #import numpy
 import numpy as np
 
+try:
+    import numba
+except:
+    os.system("python -m pip install numba")
+    #!pip install numba
+    import numba
+
+from numba import jit, prange
+
 locale.setlocale(locale.LC_ALL,"")#sets local settings to decimals
 arcpy.env.overwriteOutput = True
 arcpy.env.XYTolerance= "0.01 Meters"
@@ -65,114 +74,102 @@ temp_workspace = "in_memory"
 if ArcGISPro:
     temp_workspace = "memory"
 
+@jit(nopython=True, parallel=True)
 def ELA_AAR_MGE(EleArr, interval, ratio):
     minimum = np.min(EleArr)
     maximum = np.max(EleArr)
-
-    maxalt=int(maximum+interval)
-    minalt=int(minimum-interval)
-
-    # Create list of altitudes and populate primervalor
-    Elelist = range(minalt, maxalt, interval)
-
-    H,X1 = np.histogram( EleArr, bins = Elelist, density = True )
-    dx = X1[1] - X1[0]
-    Area3D_arr = np.cumsum(H)*dx
     
-    superf_total=max(Area3D_arr) # Get the total surface
+    maxalt = int(maximum + interval)
+    minalt = int(minimum - interval)
+
+    # Create array of bin edges
+    Elelist = np.arange(minalt, maxalt + interval, interval)
+    
+    # Calculate histogram
+    H, X1 = np.histogram(EleArr, bins=Elelist)
+    dx = X1[1] - X1[0]
+
+
+    Area3D_arr = np.cumsum(H) * dx
+    
+    superf_total = np.max(Area3D_arr)  # Get the total surface
     Area3D_arr = superf_total - Area3D_arr
 
-    ELA=superf_total * ratio # Get the surface above the ELA
-    kurowski= superf_total * 0.5
+    ELA = superf_total * ratio  # Get the surface above the ELA
+    kurowski = superf_total * 0.5
 
-    # Create a list of the altitudes whose surface is less than ELA
-    superf_en_ELA=[]
-    superf_kurowski=[]
-    for values in Area3D_arr:
-        if values <= ELA and values<= kurowski:
-            superf_en_ELA.append(values)
-            superf_kurowski.append(values)
-        elif values <= ELA and values> kurowski:
-            superf_en_ELA.append(values)
-        elif values > ELA and values<= kurowski:
-            superf_kurowski.append(values)
-        else:
-            pass
-
-    # Get the maximum surface value within the list
-    ela=max(superf_en_ELA)
-    kur=max(superf_kurowski)
-
-    idx_result = np.where(Area3D_arr == ela)
-    idx = idx_result[0][0]
-    ELA_AAR=Elelist[idx]+(interval/2) + interval ##Add one interval to match the old AA value by Yingkui 10/08/2023
-
-    idx_result = np.where(Area3D_arr == kur)
-    idx = idx_result[0][0]
-    ELA_MGE=Elelist[idx]+(interval/2) + interval ##Add one interval to match the old AA value
+    # Find indices where values meet conditions
+    ela_idx = -1
+    kur_idx = -1
+    min_ela_diff = np.inf
+    min_kur_diff = np.inf
     
-    return ELA_AAR, ELA_MGE 
+    for i in range(len(Area3D_arr)):
+        val = Area3D_arr[i]
+        
+        # Check for ELA condition
+        if val <= ELA:
+            diff = ELA - val
+            if diff < min_ela_diff:
+                min_ela_diff = diff
+                ela_idx = i
+                
+        # Check for Kurowski condition
+        if val <= kurowski:
+            diff = kurowski - val
+            if diff < min_kur_diff:
+                min_kur_diff = diff
+                kur_idx = i
 
-def ELA_AA_AABR(EleArr, interval, ratio):
+    # Calculate results
+    ELA_AAR = Elelist[ela_idx] + (interval/2) + interval
+    ELA_MGE = Elelist[kur_idx] + (interval/2) + interval
+    
+    return ELA_AAR, ELA_MGE
+
+@jit(nopython=True, parallel=True)
+def ELA_AA_AABR(EleArr, interval, AABRratio):
+    # Calculate min/max with buffer
     minimum = np.min(EleArr)
     maximum = np.max(EleArr)
-   
-    maxalt=int(maximum+interval)
-    minalt=int(minimum-interval)
+    maxalt = int(maximum + interval)
+    minalt = int(minimum - interval)
 
-    # Create a list of altitudes
-    list_altitudes=[]
-    start_altitude=minalt+(interval/2)
-    while start_altitude > minalt and start_altitude < maxalt:
-        list_altitudes.append(start_altitude)
-        start_altitude=start_altitude+interval
-
-    Elelist = range(minalt, maxalt, interval)
+    # Optimized bin calculation
+    num_bins = int(np.ceil((maxalt - minalt) / interval))
+    maxValue = minalt + interval * num_bins - interval/2
+    list_altitudes = np.linspace(minalt + interval/2, maxValue, num_bins)
     
-    H,X1 = np.histogram( EleArr, bins = Elelist, density = True )
+    # Create histogram bins
+    Elelist = np.linspace(minalt, minalt + interval * (num_bins-1), num_bins)
+    
+    # Calculate histogram and cumulative area
+    H, X1 = np.histogram(EleArr, bins=Elelist)
     dx = X1[1] - X1[0]
-    Area3D_arr = np.cumsum(H)*dx*100 ##times 100 to get the percentage
+    Area3D_arr = np.cumsum(H) * dx * 100  # Convert to percentage
 
     # AA Calculation
-    superf_total=max(Area3D_arr) # Get the total surface
-
-    resta=[int(x)-int(y) for (x,y) in zip(Area3D_arr[1:], Area3D_arr[0:])]
-
-    multiplicacion=[int(x)*int (y) for (x,y) in zip (resta,list_altitudes)]
-
-    finalmulti=sum(multiplicacion)
-
-    ELA_AA=int(int(finalmulti)/int(superf_total)) + interval ##Add one interval to match the old AA value
-
-    # AABR Calculation
-    refinf=minalt
-    valores_multi=[]
-    valorAABR=[x*(y - refinf) for (x,y) in zip (resta, list_altitudes)]
+    superf_total = np.max(Area3D_arr)
+    resta = np.diff(Area3D_arr)
+    finalmulti = np.sum(resta * list_altitudes[1:-1])
+    ELA_AA = int(finalmulti / superf_total) ##+ interval
     
-    for valoracion in valorAABR:
-        if valoracion<0:
-            valores_multi.append(int (valoracion*ratio))
-        else:
-            valores_multi.append(int (valoracion))
-
-    valorAABRfinal=sum (valores_multi)
-
-    while valorAABRfinal > 0:
-        refinf = refinf + interval
-        valores_multi=[]
-        valorAABR=[x*(y - refinf) for (x,y) in zip (resta, list_altitudes)]
-
-        for valoracion in valorAABR:
-            if valoracion < 0:
-                valores_multi.append(valoracion*ratio)
-            else:
-                valores_multi.append(valoracion)
-
-        valorAABRfinal=sum (valores_multi)
-
-    ELA_AABR = refinf-(interval/2) + interval ##Add one interval to match the old AA value
+    # Optimized AABR Calculation
+    refinf = minalt
+    while True:
+        # Vectorized calculation
+        diff = list_altitudes[1:-1] - refinf
+        weighted = resta * diff
+        adjusted = np.where(weighted < 0, weighted * AABRratio, weighted)
+        total = np.sum(adjusted)
+        
+        if total <= 0:
+            break
+        refinf += interval
     
-    return ELA_AA, ELA_AABR 
+    ELA_AABR = refinf - (interval/2) ##+ interval
+    
+    return ELA_AA, ELA_AABR
     
 ##main program
 InputPGIPolygons = arcpy.GetParameterAsText(0)
