@@ -8,7 +8,8 @@ The github site includes an ArcGIS Pro toolbox (atbx) file and a python folder, 
 PG-Tools is a GIS toolbox developed in ArcGIS Pro to help divide paleoglacier outlines based on their drainage areas and generate basic and derived attributes of paleogalcier outlines. The toolbox includes three tools: 1) divide glacier outlines for watersheds; 
 2) add basic glacier attributes, and 3) add derived attributes for paleoglaciers. All these tools are written with Python in ArcGIS Pro with a user-friendly interface that allows users to process a large set of data.
 
-![image](https://github.com/user-attachments/assets/df9561da-d43f-47c9-b5f3-2691a0e4bb0d)
+![image](https://github.com/user-attachments/assets/cbad0798-2589-4d9c-9156-220bea52b78d)
+
 
 
 ## Subdivide glacier outlines for watersheds 
