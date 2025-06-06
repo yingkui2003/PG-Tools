@@ -1,12 +1,12 @@
-# How to download and use PG-Inventory in ArcGIS Pro
+# How to download and use PG-Tools in ArcGIS Pro
 The github site includes an ArcGIS Pro toolbox (atbx) file and a python folder, including three python source code files associated with these tools. The user can click "Code" (green color) on the right side of the github page and choose Download Zip.
 
 ![image](https://github.com/user-attachments/assets/70915862-aa04-4502-be73-756a768345ee)
 
 
-# PG-Inventory
-PG-Inventory is a GIS toolbox developed in ArcGIS Pro to help divide paleoglacier outlines based on their drainage areas and generate basic and derived attributes of paleogalcier outlines. The toolbox includes three tools: 1) divide glacier outlines for watersheds; 
-2) add basic glacier attributes, and 3) add derived attributes for palaeoglaciers. All these tools are written with Python in ArcGIS Pro with a user-friendly interface that allows users to process a large set of data.
+# PG-Tools
+PG-Tools is a GIS toolbox developed in ArcGIS Pro to help divide paleoglacier outlines based on their drainage areas and generate basic and derived attributes of paleogalcier outlines. The toolbox includes three tools: 1) divide glacier outlines for watersheds; 
+2) add basic glacier attributes, and 3) add derived attributes for paleoglaciers. All these tools are written with Python in ArcGIS Pro with a user-friendly interface that allows users to process a large set of data.
 
 ![image](https://github.com/user-attachments/assets/df9561da-d43f-47c9-b5f3-2691a0e4bb0d)
 
@@ -42,7 +42,7 @@ the ice thickness raster for each paleoglacier outline. This tool also incorpora
 
 
 # Cite this work
-Li Y., Laabs, B., Anderson, L., Licciardi, J., in preparation. PG-Inventory: a GIS toolbox to standardize the format and derive attributes for paleoglacier outlines.
+Li Y., Laabs, B., Anderson, L., Licciardi, J., in review. PG-Tools: A framework and an ArcGIS toolbox to standardize paleoglacier outlines and attributes.
 
 # Contact info
 Yingkui Li
