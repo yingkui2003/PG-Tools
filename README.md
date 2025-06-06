@@ -1,7 +1,8 @@
 # How to download and use PG-Tools in ArcGIS Pro
 The github site includes an ArcGIS Pro toolbox (atbx) file and a python folder, including three python source code files associated with these tools. The user can click "Code" (green color) on the right side of the github page and choose Download Zip.
 
-![image](https://github.com/user-attachments/assets/70915862-aa04-4502-be73-756a768345ee)
+![image](https://github.com/user-attachments/assets/2e76dc21-3e04-41fe-9a6b-0bab81fb00a1)
+
 
 
 # PG-Tools
